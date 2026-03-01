@@ -15,6 +15,8 @@ Goals:
 
 ## How It Works
 
+The application can run in two modes:
+
 ### CLI Interface
 
 The application runs as a command-line tool:
@@ -25,6 +27,16 @@ The application runs as a command-line tool:
 ./dnd-recorder --resume                  # Resume recording
 ./dnd-recorder --stop                    # Stop and process
 ```
+
+### GUI Interface (Optional)
+
+A simple native GUI provides the same functionality with visual controls:
+- Start/Pause/Resume/Stop buttons
+- Campaign name input
+- Live recording status and duration
+- Transcript viewer
+
+The GUI is optional and can be built separately from the CLI version.
 
 ### Session Flow
 
@@ -44,7 +56,9 @@ The application runs as a command-line tool:
 | System access | Direct control over audio, files, network |
 | Bare metal potential | Can run without OS (embedded systems) |
 | Performance | Zero runtime overhead |
+| ML Inference | Direct integration with whisper.cpp for local transcription |
 | Career skills | Systems programming, game engines |
+| No API costs | Local transcription means no per-minute Whisper API fees |
 
 ---
 
@@ -56,7 +70,8 @@ The application runs as a command-line tool:
 |-------|------------|-------|
 | **Language** | C++17 | Modern C++ with good toolchain support |
 | **Build System** | CMake | Cross-platform build |
-| **GUI** | None (CLI first) | Simplifies learning |
+| **GUI** | Simple native GUI | Learning GUI development |
+| **ML Inference** | whisper.cpp | Local transcription, no API needed |
 
 ### Libraries
 
@@ -64,9 +79,11 @@ The application runs as a command-line tool:
 |---------|---------|-------------|
 | Audio Recording | PortAudio | Native APIs (WASAPI, ALSA, CoreAudio) |
 | Audio Encoding | ffmpeg (libav) | Command-line ffmpeg |
+| Speech-to-Text | whisper.cpp | OpenAI Whisper API |
 | HTTP Requests | libcurl | cpprestsdk (C++ REST) |
 | JSON Parsing | nlohmann/json | cJSON, rapidjson |
 | Logging | spdlog | printf-style, plog |
+| GUI Framework | ImGui or native | SDL2, SFML |
 
 ### Architecture
 
@@ -74,16 +91,22 @@ The application runs as a command-line tool:
 ┌─────────────────────────────────────────────────────────┐
 │                    dnd-recorder                           │
 ├─────────────────────────────────────────────────────────┤
+│  GUI Layer (optional)                                    │
+│  ├── Main Window (recording controls)                    │
+│  ├── Status Display                                      │
+│  └── Transcript Viewer                                   │
+├─────────────────────────────────────────────────────────┤
 │  CLI Layer (main.cpp)                                   │
 │  ├── Argument parsing                                    │
 │  └── Command dispatch                                   │
 ├─────────────────────────────────────────────────────────┤
 │  Core                                                    │
 │  ├── SessionManager      - Session state                │
-│  └── AudioEngine         - Audio capture                │
+│  ├── AudioEngine         - Audio capture                │
+│  └── TranscriptionEngine - whisper.cpp integration      │
 ├─────────────────────────────────────────────────────────┤
-│  External Integration                                   │
-│  ├── TranscriptionService - Whisper API (curl)         │
+│  External Integration                                     │
+│  ├── WhisperService       - Local transcription (cpp)  │
 │  ├── SummarizerService    - GPT API (curl)             │
 │  └── FileManager          - File I/O                   │
 └─────────────────────────────────────────────────────────┘
@@ -103,6 +126,8 @@ This project teaches:
 | File I/O | Reading/writing audio and text files |
 | Networking | HTTP requests with libcurl |
 | Audio | Microphone access, encoding |
+| ML Inference | whisper.cpp integration, model loading |
+| GUI Development | Window management, event handling |
 | Build Systems | CMake, make, linking |
 | Error Handling | Exceptions, return codes |
 
@@ -114,6 +139,10 @@ This project teaches:
 desktop/
 ├── src/
 │   ├── main.cpp
+│   ├── gui/
+│   │   ├── main_window.cpp
+│   │   ├── main_window.hpp
+│   │   └── recording_controls.cpp
 │   ├── cli/
 │   │   ├── argument_parser.cpp
 │   │   └── command_handler.cpp
@@ -121,10 +150,12 @@ desktop/
 │   │   ├── session_manager.cpp
 │   │   ├── session_manager.hpp
 │   │   ├── audio_engine.cpp
-│   │   └── audio_engine.hpp
+│   │   ├── audio_engine.hpp
+│   │   ├── transcription_engine.cpp
+│   │   └── transcription_engine.hpp
 │   ├── services/
-│   │   ├── transcription_service.cpp
-│   │   ├── transcription_service.hpp
+│   │   ├── whisper_service.cpp
+│   │   ├── whisper_service.hpp
 │   │   ├── summarizer_service.cpp
 │   │   └── summarizer_service.hpp
 │   ├── utils/
@@ -134,6 +165,7 @@ desktop/
 │   └── types/
 │       ├── session.hpp
 │       └── transcript.hpp
+├── models/                     # Whisper model files (.bin)
 ├── include/                    # Header files
 ├── tests/
 ├── CMakeLists.txt
@@ -190,6 +222,37 @@ std::string summary = response["summary"];
 auto highlights = response["highlights"];
 ```
 
+### Local Transcription (whisper.cpp)
+
+```cpp
+// Pseudo-code example
+#include "whisper.h"
+
+class WhisperService {
+private:
+    struct whisper_context* ctx;
+
+public:
+    bool loadModel(const std::string& modelPath) {
+        ctx = whisper_init_from_file(modelPath.c_str());
+        return ctx != nullptr;
+    }
+
+    std::string transcribe(const std::vector<float>& audio) {
+        whisper_full_params params = whisper_default_params(whisper_sampling_strategy_t::WHISPER_SAMPLING_GREEDY);
+        params.print_realtime = false;
+        params.print_progress = false;
+
+        whisper_full(ctx, params, audio.data(), audio.size());
+        return whisper_get_full_result(ctx);
+    }
+
+    ~WhisperService() {
+        if (ctx) whisper_free(ctx);
+    }
+};
+```
+
 ---
 
 ## Getting Started
@@ -199,7 +262,8 @@ auto highlights = response["highlights"];
 - C++17 compatible compiler (GCC, Clang, MSVC)
 - CMake 3.15+
 - ffmpeg (for audio encoding)
-- OpenAI API key
+- OpenAI API key (for summarization only)
+- whisper.cpp model file (downloaded at build or runtime)
 
 ### Dependencies Installation
 
@@ -233,6 +297,61 @@ make
 ./dnd-recorder --start "Curse of Strahd"
 # ... play D&D ...
 ./dnd-recorder --stop
+```
+
+---
+
+## GUI Requirements (Gathering Phase)
+
+> **Note:** This section is for requirements gathering only. No implementation yet.
+
+### Overview
+
+A simple native GUI for recording and viewing transcriptions. The GUI should be minimal and focused on the core workflow.
+
+### Required Features
+
+| Feature | Priority | Notes |
+|---------|----------|-------|
+| Recording Controls | Must | Start/Pause/Resume/Stop buttons |
+| Campaign Name Input | Must | Text field for session name |
+| Recording Status | Must | Visual indicator (recording/paused/idle) |
+| Duration Display | Must | Show elapsed recording time |
+| Transcript View | Should | Display final transcription |
+
+### Optional Features (Post-MVP)
+
+- Audio level meter
+- Model selection dropdown
+- Export buttons
+- Session history list
+
+### Technology Options
+
+| Framework | Pros | Cons |
+|-----------|------|------|
+| ImGui | Immediate mode, simple | Non-native look |
+| Qt | Full-featured, native | Heavier dependency |
+| Native (Win32/GTK/Cocoa) | Lightweight, native | More code to write |
+| FLTK | Simple, lightweight | Limited features |
+
+### UI Mockup (Text)
+
+```
+┌────────────────────────────────────────────┐
+│  D&D Session Recorder                       │
+├────────────────────────────────────────────┤
+│  Campaign: [________________]              │
+│                                            │
+│  [●RECORD] [⏸PAUSE] [⏹STOP]               │
+│                                            │
+│  Status: Recording...  ⏱ 00:45:23          │
+│                                            │
+│  ──── Transcript ────                     │
+│  [Transcription will appear here...]       │
+│                                            │
+│  [Copy] [Save to File]                     │
+└────────────────────────────────────────────┘
 ```
 
 ---
@@ -292,8 +411,9 @@ LOCATIONS
 
 ## Future Enhancements (Post-MVP)
 
-- GUI with Qt or ImGui
 - System tray recording indicator
 - Multiple audio input selection
-- Local Whisper model (no API needed)
+- Multiple Whisper model sizes (tiny to large)
 - Database for session history
+- Session search and filtering
+- Export to different formats (Markdown, PDF)

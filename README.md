@@ -11,7 +11,7 @@ This repository contains two implementations of the same core functionality:
 
 Both versions:
 - Record voice sessions
-- Transcribe audio using OpenAI Whisper
+- Transcribe audio using local whisper.cpp (no API needed)
 - Generate summaries with key highlights using an LLM
 - Output formatted text files
 
@@ -52,7 +52,7 @@ make
 |---------|-------------|-------------|
 | Platform | Discord | Windows/Mac/Linux |
 | Recording | Discord voice | System audio/microphone |
-| AI Transcription | OpenAI Whisper | OpenAI Whisper |
+| AI Transcription | whisper.cpp (local) | whisper.cpp (local) |
 | LLM Summary | OpenAI GPT-4o | OpenAI GPT-4o |
 | Learning Curve | Lower | Higher (C++) |
 
