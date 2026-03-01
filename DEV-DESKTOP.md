@@ -83,7 +83,7 @@ The GUI is optional and can be built separately from the CLI version.
 | HTTP Requests | libcurl | cpprestsdk (C++ REST) |
 | JSON Parsing | nlohmann/json | cJSON, rapidjson |
 | Logging | spdlog | printf-style, plog |
-| GUI Framework | ImGui or native | SDL2, SFML |
+| GUI Framework | Qt | Cross-platform, native look, well-documented |
 
 ### Architecture
 
@@ -91,9 +91,9 @@ The GUI is optional and can be built separately from the CLI version.
 ┌─────────────────────────────────────────────────────────┐
 │                    dnd-recorder                           │
 ├─────────────────────────────────────────────────────────┤
-│  GUI Layer (optional)                                    │
-│  ├── Main Window (recording controls)                    │
-│  ├── Status Display                                      │
+│  GUI Layer (Qt)                                          │
+│  ├── Main Window (Qt Widgets)                            │
+│  ├── Recording Controls                                  │
 │  └── Transcript Viewer                                   │
 ├─────────────────────────────────────────────────────────┤
 │  CLI Layer (main.cpp)                                   │
@@ -140,6 +140,7 @@ desktop/
 ├── src/
 │   ├── main.cpp
 │   ├── gui/
+│   │   ├── main_window.ui          # Qt Designer file
 │   │   ├── main_window.cpp
 │   │   ├── main_window.hpp
 │   │   └── recording_controls.cpp
@@ -270,17 +271,17 @@ public:
 **Ubuntu/Debian:**
 ```bash
 sudo apt install cmake build-essential libcurl4-openssl-dev \
-    libportaudio2 libavcodec-dev libjson-c-dev
+    libportaudio2 libavcodec-dev libjson-c-dev qt5-default
 ```
 
 **macOS:**
 ```bash
-brew install cmake curl portaudio ffmpeg
+brew install cmake curl portaudio ffmpeg qt@5
 ```
 
 **Windows:**
 - Visual Studio 2019+ with C++ workload
-- vcpkg for dependencies
+- vcpkg for dependencies (qt5, portaudio, curl)
 
 ### Build
 
@@ -330,10 +331,12 @@ A simple native GUI for recording and viewing transcriptions. The GUI should be 
 
 | Framework | Pros | Cons |
 |-----------|------|------|
+| **Qt** | Cross-platform, native look, excellent docs, visual designer | Heavier dependency |
 | ImGui | Immediate mode, simple | Non-native look |
-| Qt | Full-featured, native | Heavier dependency |
 | Native (Win32/GTK/Cocoa) | Lightweight, native | More code to write |
 | FLTK | Simple, lightweight | Limited features |
+
+**Selected: Qt** - Best balance of cross-platform support and developer experience.
 
 ### UI Mockup (Text)
 
